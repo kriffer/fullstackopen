@@ -20,26 +20,24 @@ const App = () => {
       })
   }, [])
 
-  const addPerson = (event) => {
-    event.preventDefault()
-    let dup = false;
 
-    let person = persons.filter(person => person.name === newName)[0]
 
-    if (person) {
+  const updatePerson = (person) => {
 
-      dup = true;
+    if (window.confirm(`${person.name} is already added to phonebook, replace the old number with new one?`)) {
 
-      if (window.confirm(`${person.name} is already added to phonebook, replace the old number with new one?`)) {
-        let updatedPerson = { ...person, number: newNumber }
-        personsService.update(person.id, updatedPerson)
+      personsService.getAll().then(persons => {
+        let personToUpdate = persons.filter(p => p.name === person.name)[0]
+        let updatedPerson = { ...personToUpdate, number: newNumber }
+        console.log(updatedPerson)
+        personsService.update(updatedPerson.id, updatedPerson)
           .then(data => {
-            setPersons(persons.map(p => p.id !== person.id ? p : data))
+            setPersons(persons.map(p => p.id !== updatedPerson.id ? p : data))
             setNewName('')
             setNewNumber('')
           }).catch(error => {
             setMessage({
-              text: `Information of '${person.name}' has already been removed from server`, type: 'error'
+              text: `Information of '${updatedPerson.name}' has already been removed from server`, type: 'error'
             }
             )
             setTimeout(() => {
@@ -49,25 +47,35 @@ const App = () => {
             setNewName('')
             setNewNumber('')
           })
-      } else { return }
+      })
+    } else { return }
 
-    }
+  }
 
-    if (!dup) {
 
-      let newPerson = { name: newName, number: newNumber, id: persons.length + 1 }
-      personsService.create(newPerson)
-        .then(data => {
-          setPersons(persons.concat(newPerson))
-          setMessage({ text: `Added ${newName}`, type: 'success' })
-          setTimeout(() => {
-            setMessage(null)
-          }, 3000)
-        })
+  const addPerson = (event) => {
+    event.preventDefault()
 
-      setNewName('')
-      setNewNumber('')
-    }
+
+    let newPerson = { name: newName, number: newNumber }
+    personsService.create(newPerson)
+      .then(createdPerson => {
+        setPersons(persons.concat(createdPerson))
+        setMessage({ text: `Added ${createdPerson.name}`, type: 'success' })
+        setTimeout(() => {
+          setMessage(null)
+        }, 3000)
+        setNewName('')
+        setNewNumber('')
+      }).catch(error => {
+        console.log(error.response.data)
+      
+        if (error.response.data.error.includes('Person validation failed: name:')) {
+          updatePerson(newPerson)
+        }
+        
+      })
+
   }
 
 
